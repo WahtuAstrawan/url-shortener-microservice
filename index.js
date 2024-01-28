@@ -20,7 +20,7 @@ const urlSchema = new mongoose.Schema({
     required: true,
   },
   short_url: {
-    type: Number,
+    type: String,
     unique: true,
     required: true,
   }
@@ -52,10 +52,6 @@ const urlChecker = async (req, res, next) => {
   }
 }
 
-const generateRandomNum = () => {
-  return Math.floor(Math.random() * 9999) + 1;
-}
-
 // Basic Configuration
 const port = process.env.PORT || 3000;
 
@@ -69,25 +65,22 @@ app.get('/', function (req, res) {
 });
 
 app.post('/api/shorturl', urlChecker, async (req, res) => {
-  const { url } = req.body;
-  let shortenerId;
+  const { url, shortUrl } = req.body;
 
-  while (true) {
-    shortenerId = generateRandomNum();
-    const urlData = await UrlModel.findOne({ short_url: shortenerId });
-    if (!urlData) {
-      break;
-    }
+  const urlData = await UrlModel.findOne({ short_url: shortUrl });
+
+  if(urlData){
+    return res.json({ error: "Short URL Alias Name Already Used"});
   }
 
-  await UrlModel.create({ original_url: url, short_url: shortenerId });
+  await UrlModel.create({ original_url: url, short_url: shortUrl });
 
-  return res.json({ original_url: `${url}`, short_url: shortenerId });
+  return res.json({ original_url: url, short_url: shortUrl });
 });
 
-app.get('/api/shorturl/:shortId', async (req, res) => {
-  const shortId = req.params.shortId;
-  const urlData = await UrlModel.findOne({ short_url: shortId });
+app.get('/link/:shortUrl', async (req, res) => {
+  const shortUrl = req.params.shortUrl;
+  const urlData = await UrlModel.findOne({ short_url: shortUrl });
   if (urlData) {
     return res.redirect(urlData.original_url);
   } else {
